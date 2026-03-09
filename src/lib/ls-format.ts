@@ -35,6 +35,7 @@ export function toLabStudioFormat(
     domain: task.domain,
     scenario: task.scenario,
     status: task.status,
+    flagged: task.flagged,
   };
 
   if (!annotation) {

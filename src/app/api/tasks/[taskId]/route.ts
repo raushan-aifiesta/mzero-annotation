@@ -32,8 +32,17 @@ export async function PATCH(
   try {
     const { taskId } = await params;
     const body = await request.json();
+
+    // Handle flagged toggle
+    if (typeof body.flagged === 'boolean') {
+      const { toggleTaskFlag } = await import("@/lib/store");
+      await toggleTaskFlag(taskId, body.flagged);
+      return NextResponse.json({ success: true });
+    }
+
+    // Handle status update
     const status = body.status as TaskStatus;
-    if (!status || !['pending', 'in_progress', 'submitted', 'reviewed'].includes(status)) {
+    if (!status || !['pending', 'in_progress', 'submitted', 'reviewed', 'flagged'].includes(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
     await updateTaskStatus(taskId, status);

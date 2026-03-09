@@ -13,6 +13,7 @@ interface LSTask {
     domain: string;
     scenario: string;
     status?: string;
+    flagged?: boolean;
     [key: string]: unknown;
   };
   annotations: any[];
@@ -59,6 +60,7 @@ export default function HomePage() {
     if (filter === "in_progress" && status !== "in_progress") return false;
     if (filter === "submitted" && status !== "submitted") return false;
     if (filter === "reviewed" && status !== "reviewed") return false;
+    if (filter === "flagged" && !t.data.flagged) return false;
     if (langFilter !== "all" && t.data.language !== langFilter) return false;
     return true;
   });
@@ -68,6 +70,7 @@ export default function HomePage() {
   const inProgressCount = tasks.filter((t) => getTaskStatus(t) === "in_progress").length;
   const submittedCount = tasks.filter((t) => getTaskStatus(t) === "submitted").length;
   const reviewedCount = tasks.filter((t) => getTaskStatus(t) === "reviewed").length;
+  const flaggedCount = tasks.filter((t) => t.data.flagged).length;
   const progress = totalTasks > 0 ? Math.round((annotated / totalTasks) * 100) : 0;
 
   function copyJson() {
@@ -93,7 +96,7 @@ export default function HomePage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-6 gap-4 mb-6">
         <div className="bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl p-4">
           <p className="text-[var(--text-secondary)] text-xs">Total</p>
           <p className="text-2xl font-bold mt-1">{totalTasks}</p>
@@ -109,6 +112,10 @@ export default function HomePage() {
         <div className="bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl p-4">
           <p className="text-[var(--text-secondary)] text-xs">Reviewed</p>
           <p className="text-2xl font-bold mt-1 text-[var(--success)]">{reviewedCount}</p>
+        </div>
+        <div className="bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl p-4">
+          <p className="text-[var(--text-secondary)] text-xs">Flagged</p>
+          <p className="text-2xl font-bold mt-1 text-orange-500">{flaggedCount}</p>
         </div>
         <div className="bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl p-4">
           <p className="text-[var(--text-secondary)] text-xs">Progress</p>
@@ -135,6 +142,7 @@ export default function HomePage() {
             { key: "in_progress", label: "In Progress" },
             { key: "submitted", label: "Submitted" },
             { key: "reviewed", label: "Reviewed" },
+            { key: "flagged", label: "Flagged" },
           ].map((f) => (
             <button
               key={f.key}
@@ -204,6 +212,10 @@ export default function HomePage() {
                     <span className="w-5 h-5 rounded-full bg-[var(--bg-tertiary)] border border-[var(--border)] flex-shrink-0" title="Pending" />
                   );
                 })()}
+
+                {task.data.flagged && (
+                  <span className="text-orange-500 flex-shrink-0" title="Flagged for review">{"\u2691"}</span>
+                )}
 
                 <Link
                   href={`/annotate/${task.data.task_id}`}

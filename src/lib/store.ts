@@ -53,3 +53,11 @@ export async function updateTaskStatus(taskId: string, status: TaskStatus): Prom
   }
   // Local store: no-op (status is derived from annotations)
 }
+
+export async function toggleTaskFlag(taskId: string, flagged: boolean): Promise<void> {
+  if (useSupabase()) {
+    const { toggleTaskFlag } = await import("./supabase-store");
+    return toggleTaskFlag(taskId, flagged);
+  }
+  // Local store: no-op
+}

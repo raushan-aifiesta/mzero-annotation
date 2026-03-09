@@ -22,6 +22,7 @@ export async function loadTasks(): Promise<LocalTask[]> {
       audio_url: row.audio_url,
       is_labeled: status !== 'pending',
       status,
+      flagged: row.flagged || false,
     };
   });
 }
@@ -111,6 +112,16 @@ export async function updateTaskStatus(taskId: string, status: TaskStatus): Prom
     .eq("id", taskId);
 
   if (error) throw new Error(`Failed to update task status: ${error.message}`);
+}
+
+export async function toggleTaskFlag(taskId: string, flagged: boolean): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("tata_eval_tasks")
+    .update({ flagged })
+    .eq("id", taskId);
+
+  if (error) throw new Error(`Failed to toggle flag: ${error.message}`);
 }
 
 export async function getAnnotation(taskId: string): Promise<LocalAnnotation | null> {

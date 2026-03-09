@@ -11,7 +11,7 @@ export interface LocalProject {
   annotated_count: number;
 }
 
-export type TaskStatus = 'pending' | 'in_progress' | 'submitted' | 'reviewed';
+export type TaskStatus = 'pending' | 'in_progress' | 'submitted' | 'reviewed' | 'flagged';
 
 export interface LocalTask {
   id: string;
@@ -23,6 +23,7 @@ export interface LocalTask {
   audio_url: string;
   is_labeled: boolean;
   status: TaskStatus;
+  flagged: boolean;
 }
 
 export interface PronError {
@@ -89,6 +90,7 @@ export function loadTasks(): LocalTask[] {
       audio_url: `/audio/${id}.wav`,
       is_labeled: isLabeled,
       status: isLabeled ? 'submitted' : 'pending',
+      flagged: false,
     });
   }
   return tasks;

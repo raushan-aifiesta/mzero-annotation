@@ -6,7 +6,7 @@ import Link from "next/link";
 import WaveSurfer from "wavesurfer.js";
 import TranslitInput from "@/components/TranslitInput";
 
-type TaskStatus = 'pending' | 'in_progress' | 'submitted' | 'reviewed';
+type TaskStatus = 'pending' | 'in_progress' | 'submitted' | 'reviewed' | 'flagged';
 
 interface Task {
   id: string;
@@ -18,6 +18,7 @@ interface Task {
   audio_url: string;
   is_labeled: boolean;
   status: TaskStatus;
+  flagged: boolean;
 }
 
 interface PronError {
@@ -72,6 +73,7 @@ const ERROR_CONTEXT_GROUPS = [
 ];
 
 const ISSUE_OPTIONS = [
+  { label: "No issues", hotkey: "," },
   { label: "Voice changes at code-switch", hotkey: "n" },
   { label: "Unnatural pause", hotkey: "m" },
   { label: "Wrong emphasis" },
@@ -368,9 +370,13 @@ export default function AnnotatePage() {
   }
 
   function toggleIssue(issue: string) {
-    setIssues((prev) =>
-      prev.includes(issue) ? prev.filter((i) => i !== issue) : [...prev, issue]
-    );
+    setIssues((prev) => {
+      if (issue === "No issues") {
+        return prev.includes("No issues") ? [] : ["No issues"];
+      }
+      const without = prev.filter((i) => i !== "No issues");
+      return without.includes(issue) ? without.filter((i) => i !== issue) : [...without, issue];
+    });
   }
 
   // Build the annotation payload (reused by both auto-save and submit)
@@ -480,6 +486,21 @@ export default function AnnotatePage() {
       alert("Failed: " + (err instanceof Error ? err.message : "Unknown"));
     }
   }, [taskId]);
+
+  const handleToggleFlag = useCallback(async () => {
+    const newFlagged = !task?.flagged;
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ flagged: newFlagged }),
+      });
+      if (!res.ok) throw new Error("Failed to toggle flag");
+      setTask(prev => prev ? { ...prev, flagged: newFlagged } : prev);
+    } catch (err) {
+      alert("Failed: " + (err instanceof Error ? err.message : "Unknown"));
+    }
+  }, [taskId, task?.flagged]);
 
   // Keyboard: Space=play/pause, Cmd+S=submit
   useEffect(() => {
@@ -593,6 +614,18 @@ export default function AnnotatePage() {
              task.status === 'submitted' ? 'Submitted' :
              task.status === 'in_progress' ? 'In Progress' : 'Pending'}
           </span>
+          {/* Flag button */}
+          <button
+            onClick={handleToggleFlag}
+            title={task.flagged ? "Unflag this task" : "Flag for doubt/review"}
+            className={`px-2 py-0.5 rounded text-sm transition ${
+              task.flagged
+                ? "bg-orange-100 text-orange-600 hover:bg-orange-200"
+                : "text-[var(--text-secondary)] hover:text-orange-500"
+            }`}
+          >
+            {task.flagged ? "\u2691 Flagged" : "\u2690 Flag"}
+          </button>
           {/* Auto-save indicator */}
           {autoSaveStatus === 'saving' && (
             <span className="text-[10px] text-amber-500">Saving...</span>
@@ -747,6 +780,18 @@ export default function AnnotatePage() {
                 </div>
                 <span className="px-2 py-1 bg-[var(--bg-tertiary)] rounded">{currentTime}</span>
                 <span className="px-2 py-1 bg-[var(--bg-tertiary)] rounded">{duration}</span>
+                <a
+                  href={task.audio_url}
+                  download={`${task.id}.wav`}
+                  title="Download audio"
+                  className="w-7 h-7 flex items-center justify-center rounded bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--accent)]/10 transition"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                </a>
               </div>
             </div>
           </div>

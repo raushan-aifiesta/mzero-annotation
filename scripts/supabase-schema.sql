@@ -59,3 +59,11 @@ UPDATE tata_eval_tasks SET status = 'pending' WHERE is_labeled = false AND (stat
 
 -- Index for status filtering
 CREATE INDEX IF NOT EXISTS idx_tata_eval_tasks_status ON tata_eval_tasks(status);
+
+-- ─── Migration: Update status CHECK to include 'flagged' ───
+ALTER TABLE tata_eval_tasks DROP CONSTRAINT IF EXISTS tata_eval_tasks_status_check;
+ALTER TABLE tata_eval_tasks ADD CONSTRAINT tata_eval_tasks_status_check
+  CHECK (status IN ('pending', 'in_progress', 'submitted', 'reviewed', 'flagged'));
+
+-- ─── Migration: Flagged column for doubt/review marking ───
+ALTER TABLE tata_eval_tasks ADD COLUMN IF NOT EXISTS flagged BOOLEAN DEFAULT FALSE;
