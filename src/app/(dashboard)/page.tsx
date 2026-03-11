@@ -174,7 +174,7 @@ export default function HomePage() {
         </span>
 
         <Link
-          href="/api/export"
+          href="/api/export?download=1"
           target="_blank"
           className="ml-auto px-3 py-1.5 border border-[var(--border)] rounded-lg text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent)] transition"
         >

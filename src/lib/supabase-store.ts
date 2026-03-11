@@ -23,6 +23,7 @@ export async function loadTasks(): Promise<LocalTask[]> {
       is_labeled: status !== 'pending',
       status,
       flagged: row.flagged || false,
+      approved_annotation_id: row.approved_annotation_id || undefined,
     };
   });
 }
@@ -35,29 +36,7 @@ export async function loadAnnotations(): Promise<LocalAnnotation[]> {
 
   if (error) throw new Error(`Failed to load annotations: ${error.message}`);
 
-  return (data || []).map((row) => ({
-    task_id: row.task_id,
-    pron_errors: row.pron_errors || [],
-    naturalness: row.naturalness || "",
-    naturalness_comment: row.naturalness_comment || "",
-    naturalness_comment_lang: row.naturalness_comment_lang || "en",
-    emotion: row.emotion || "",
-    emotion_comment: row.emotion_comment || "",
-    emotion_comment_lang: row.emotion_comment_lang || "en",
-    speaker_consistency: row.speaker_consistency || "",
-    consistency_comment: row.consistency_comment || "",
-    consistency_comment_lang: row.consistency_comment_lang || "en",
-    audio_clarity: row.audio_clarity || "",
-    clarity_comment: row.clarity_comment || "",
-    clarity_comment_lang: row.clarity_comment_lang || "en",
-    number_pronunciation: row.number_pronunciation || "",
-    number_comment: row.number_comment || "",
-    number_comment_lang: row.number_comment_lang || "en",
-    issues: row.issues || [],
-    notes: row.notes || "",
-    notes_lang: row.notes_lang || "en",
-    created_at: row.created_at,
-  }));
+  return (data || []).map(mapAnnotationRow);
 }
 
 export async function saveAnnotation(annotation: LocalAnnotation, status: TaskStatus = 'submitted'): Promise<void> {
@@ -69,6 +48,7 @@ export async function saveAnnotation(annotation: LocalAnnotation, status: TaskSt
     .upsert(
       {
         task_id: annotation.task_id,
+        annotator_id: annotation.annotator_id || "anonymous",
         pron_errors: annotation.pron_errors,
         naturalness: annotation.naturalness,
         naturalness_comment: annotation.naturalness_comment,
@@ -90,7 +70,7 @@ export async function saveAnnotation(annotation: LocalAnnotation, status: TaskSt
         notes_lang: annotation.notes_lang,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "task_id" }
+      { onConflict: "task_id,annotator_id" }
     );
 
   if (annError) throw new Error(`Failed to save annotation: ${annError.message}`);
@@ -126,36 +106,65 @@ export async function toggleTaskFlag(taskId: string, flagged: boolean): Promise<
 
 export async function getAnnotation(taskId: string): Promise<LocalAnnotation | null> {
   const supabase = await createClient();
+  // Use limit(1) instead of maybeSingle() — tasks can have multiple annotations
   const { data, error } = await supabase
     .from("tata_eval_annotations")
     .select("*")
     .eq("task_id", taskId)
-    .maybeSingle();
+    .order("created_at", { ascending: false })
+    .limit(1);
 
   if (error) throw new Error(`Failed to get annotation: ${error.message}`);
-  if (!data) return null;
+  if (!data || data.length === 0) return null;
 
+  return mapAnnotationRow(data[0]);
+}
+
+export async function getAnnotationsForTask(taskId: string): Promise<LocalAnnotation[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("tata_eval_annotations")
+    .select("*")
+    .eq("task_id", taskId)
+    .order("created_at", { ascending: true });
+
+  if (error) throw new Error(`Failed to get annotations: ${error.message}`);
+  return (data || []).map(mapAnnotationRow);
+}
+
+export async function approveAnnotation(taskId: string, annotatorId: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("tata_eval_tasks")
+    .update({ approved_annotation_id: annotatorId, status: 'reviewed' as TaskStatus, is_labeled: true })
+    .eq("id", taskId);
+
+  if (error) throw new Error(`Failed to approve annotation: ${error.message}`);
+}
+
+function mapAnnotationRow(data: Record<string, unknown>): LocalAnnotation {
   return {
-    task_id: data.task_id,
-    pron_errors: data.pron_errors || [],
-    naturalness: data.naturalness || "",
-    naturalness_comment: data.naturalness_comment || "",
-    naturalness_comment_lang: data.naturalness_comment_lang || "en",
-    emotion: data.emotion || "",
-    emotion_comment: data.emotion_comment || "",
-    emotion_comment_lang: data.emotion_comment_lang || "en",
-    speaker_consistency: data.speaker_consistency || "",
-    consistency_comment: data.consistency_comment || "",
-    consistency_comment_lang: data.consistency_comment_lang || "en",
-    audio_clarity: data.audio_clarity || "",
-    clarity_comment: data.clarity_comment || "",
-    clarity_comment_lang: data.clarity_comment_lang || "en",
-    number_pronunciation: data.number_pronunciation || "",
-    number_comment: data.number_comment || "",
-    number_comment_lang: data.number_comment_lang || "en",
-    issues: data.issues || [],
-    notes: data.notes || "",
-    notes_lang: data.notes_lang || "en",
-    created_at: data.created_at,
+    task_id: data.task_id as string,
+    annotator_id: (data.annotator_id as string) || undefined,
+    pron_errors: (data.pron_errors as LocalAnnotation["pron_errors"]) || [],
+    naturalness: (data.naturalness as string) || "",
+    naturalness_comment: (data.naturalness_comment as string) || "",
+    naturalness_comment_lang: (data.naturalness_comment_lang as string) || "en",
+    emotion: (data.emotion as string) || "",
+    emotion_comment: (data.emotion_comment as string) || "",
+    emotion_comment_lang: (data.emotion_comment_lang as string) || "en",
+    speaker_consistency: (data.speaker_consistency as string) || "",
+    consistency_comment: (data.consistency_comment as string) || "",
+    consistency_comment_lang: (data.consistency_comment_lang as string) || "en",
+    audio_clarity: (data.audio_clarity as string) || "",
+    clarity_comment: (data.clarity_comment as string) || "",
+    clarity_comment_lang: (data.clarity_comment_lang as string) || "en",
+    number_pronunciation: (data.number_pronunciation as string) || "",
+    number_comment: (data.number_comment as string) || "",
+    number_comment_lang: (data.number_comment_lang as string) || "en",
+    issues: (data.issues as string[]) || [],
+    notes: (data.notes as string) || "",
+    notes_lang: (data.notes_lang as string) || "en",
+    created_at: data.created_at as string,
   };
 }

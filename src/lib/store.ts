@@ -61,3 +61,20 @@ export async function toggleTaskFlag(taskId: string, flagged: boolean): Promise<
   }
   // Local store: no-op
 }
+
+export async function approveAnnotation(taskId: string, annotatorId: string): Promise<void> {
+  if (useSupabase()) {
+    const { approveAnnotation } = await import("./supabase-store");
+    return approveAnnotation(taskId, annotatorId);
+  }
+  // Local store: no-op
+}
+
+export async function getAnnotationsForTask(taskId: string): Promise<LocalAnnotation[]> {
+  if (useSupabase()) {
+    const { getAnnotationsForTask } = await import("./supabase-store");
+    return getAnnotationsForTask(taskId);
+  }
+  const { loadAnnotations } = await import("./local-store");
+  return loadAnnotations().filter((a) => a.task_id === taskId);
+}

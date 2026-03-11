@@ -30,7 +30,18 @@ export default function Sidebar() {
           <span>Dashboard</span>
         </Link>
         <Link
-          href="/api/export"
+          href="/review"
+          className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition ${
+            pathname.startsWith("/review")
+              ? "bg-[var(--accent)] text-white"
+              : "text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
+          }`}
+        >
+          <span className="w-5 text-center">&amp;</span>
+          <span>Review</span>
+        </Link>
+        <Link
+          href="/api/export?download=1"
           target="_blank"
           className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] transition"
         >

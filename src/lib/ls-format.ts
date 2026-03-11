@@ -21,28 +21,9 @@ interface LSResult {
   origin: string;
 }
 
-export function toLabStudioFormat(
-  task: LocalTask,
-  annotation: LocalAnnotation | null,
-  taskIndex: number
-) {
-  const data = {
-    audio: `/audio/${task.id}.wav`,
-    user_transcript: task.user_transcript,
-    agent_transcript: task.agent_transcript,
-    task_id: task.id,
-    language: task.language,
-    domain: task.domain,
-    scenario: task.scenario,
-    status: task.status,
-    flagged: task.flagged,
-  };
-
-  if (!annotation) {
-    return { id: taskIndex + 1, data, annotations: [], predictions: [] };
-  }
-
+function buildAnnotationResult(annotation: LocalAnnotation): LSResult[] {
   const result: LSResult[] = [];
+
   // --- Pronunciation errors → labels on agent_text ---
   for (const err of annotation.pron_errors) {
     const regionId = uid();
@@ -212,20 +193,45 @@ export function toLabStudioFormat(
     });
   }
 
+  return result;
+}
+
+export function toLabStudioFormat(
+  task: LocalTask,
+  annotations: LocalAnnotation[],
+  taskIndex: number
+) {
+  const data = {
+    audio: `/audio/${task.id}.wav`,
+    user_transcript: task.user_transcript,
+    agent_transcript: task.agent_transcript,
+    task_id: task.id,
+    language: task.language,
+    domain: task.domain,
+    scenario: task.scenario,
+    status: task.status,
+    flagged: task.flagged,
+  };
+
+  if (annotations.length === 0) {
+    return { id: taskIndex + 1, data, annotations: [], predictions: [] };
+  }
+
+  const lsAnnotations = annotations.map((ann, annIdx) => ({
+    id: taskIndex * 100 + annIdx + 1,
+    completed_by: ann.annotator_id || "unknown",
+    result: buildAnnotationResult(ann),
+    created_at: ann.created_at,
+    updated_at: ann.created_at,
+    lead_time: null,
+    was_cancelled: false,
+    ground_truth: false,
+  }));
+
   return {
     id: taskIndex + 1,
     data,
-    annotations: [
-      {
-        id: taskIndex + 1,
-        result,
-        created_at: annotation.created_at,
-        updated_at: annotation.created_at,
-        lead_time: null,
-        was_cancelled: false,
-        ground_truth: false,
-      },
-    ],
+    annotations: lsAnnotations,
     predictions: [],
   };
 }

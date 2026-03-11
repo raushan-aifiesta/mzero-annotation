@@ -24,6 +24,7 @@ export interface LocalTask {
   is_labeled: boolean;
   status: TaskStatus;
   flagged: boolean;
+  approved_annotation_id?: string;
 }
 
 export interface PronError {
@@ -38,6 +39,7 @@ export interface PronError {
 
 export interface LocalAnnotation {
   task_id: string;
+  annotator_id?: string;
   pron_errors: PronError[];
   naturalness: string;
   naturalness_comment: string;
