@@ -12,3 +12,13 @@ tsconfig.tsbuildinfo
 # Local data (seeded separately)
 data/
 public/audio
+
+# Vercel local config
+.vercel/
+
+# Original data (large parquet with audio)
+originalData/
+
+# Confidential exports and scripts
+exportedData/
+scripts/

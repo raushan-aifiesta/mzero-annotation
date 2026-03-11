@@ -297,20 +297,38 @@ export default function ReviewTaskPage() {
         );
 
         // Update task list to reflect approval
-        setAllTasks((prev) =>
-          prev.map((t) =>
+        setAllTasks((prev) => {
+          const updated = prev.map((t) =>
             t.id === taskId
               ? { ...t, approved_annotation_id: annotatorId, status: "reviewed" }
               : t
-          )
-        );
+          );
+
+          // Auto-navigate to next unapproved task after a short delay
+          const start = updated.findIndex((t) => t.id === taskId);
+          let nextId: string | null = null;
+          for (let i = start + 1; i < updated.length; i++) {
+            if (!updated[i].approved_annotation_id) { nextId = updated[i].id; break; }
+          }
+          if (!nextId) {
+            for (let i = 0; i < start; i++) {
+              if (!updated[i].approved_annotation_id) { nextId = updated[i].id; break; }
+            }
+          }
+          if (nextId) {
+            const dest = nextId;
+            setTimeout(() => router.push(`/review/${dest}`), 600);
+          }
+
+          return updated;
+        });
       } catch (e) {
         alert("Failed: " + (e instanceof Error ? e.message : "Unknown"));
       } finally {
         setApproving(false);
       }
     },
-    [taskId]
+    [taskId, router]
   );
 
   const navigateTo = useCallback(
@@ -380,7 +398,7 @@ export default function ReviewTaskPage() {
           {nextUnapprovedId && nextUnapprovedId !== taskId && (
             <button
               onClick={() => navigateTo(nextUnapprovedId)}
-              className="px-3 py-1.5 text-sm border border-yellow-500/50 rounded-lg text-yellow-400 hover:border-yellow-400 transition"
+              className="px-3 py-1.5 text-sm bg-[var(--accent)] text-white rounded-lg hover:opacity-90 transition"
               title="Next unapproved (N key)"
             >
               Next unapproved &rarr;
@@ -483,22 +501,23 @@ export default function ReviewTaskPage() {
       )}
 
       {/* Annotations side-by-side */}
-      <div className="flex gap-4">
+      <div className="flex gap-4 overflow-x-auto pb-2">
         {annotations.map((ann, idx) => (
-          <AnnotationCard
-            key={ann.annotator_id || idx}
-            annotation={ann}
-            label={`Annotator ${String.fromCharCode(65 + idx)}`}
-            agentTranscript={task.agent_transcript}
-            isApproved={
-              task.approved_annotation_id === ann.annotator_id
-            }
-            onApprove={() => handleApprove(ann.annotator_id || "")}
-            approving={approving}
-          />
+          <div key={ann.annotator_id || idx} className="min-w-[340px] flex-1">
+            <AnnotationCard
+              annotation={ann}
+              label={`Annotator ${String.fromCharCode(65 + idx)}`}
+              agentTranscript={task.agent_transcript}
+              isApproved={
+                task.approved_annotation_id === ann.annotator_id
+              }
+              onApprove={() => handleApprove(ann.annotator_id || "")}
+              approving={approving}
+            />
+          </div>
         ))}
         {annotations.length === 1 && (
-          <div className="flex-1 border border-dashed border-[var(--border)] rounded-xl p-5 flex items-center justify-center text-[var(--text-secondary)] text-sm">
+          <div className="min-w-[340px] flex-1 border border-dashed border-[var(--border)] rounded-xl p-5 flex items-center justify-center text-[var(--text-secondary)] text-sm">
             Only one annotation submitted
           </div>
         )}
