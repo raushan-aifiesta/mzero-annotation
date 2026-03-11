@@ -55,14 +55,24 @@ export default function ReviewDashboard() {
         <h1 className="text-xl font-bold text-[var(--text-primary)]">
           Review Dashboard
         </h1>
-        {firstUnapproved && (
-          <Link
-            href={`/review/${firstUnapproved.id}`}
-            className="px-4 py-2 text-sm bg-[var(--accent)] text-white rounded-lg hover:opacity-90 transition"
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              window.location.href = "/api/export?download=1";
+            }}
+            className="px-4 py-2 text-sm border border-[var(--border)] text-[var(--text-primary)] rounded-lg hover:border-[var(--accent)] hover:text-[var(--accent)] transition"
           >
-            Start reviewing &rarr;
-          </Link>
-        )}
+            Export approved ({approvedCount})
+          </button>
+          {firstUnapproved && (
+            <Link
+              href={`/review/${firstUnapproved.id}`}
+              className="px-4 py-2 text-sm bg-[var(--accent)] text-white rounded-lg hover:opacity-90 transition"
+            >
+              Start reviewing &rarr;
+            </Link>
+          )}
+        </div>
       </div>
 
       <p className="text-sm text-[var(--text-secondary)] mb-4">
